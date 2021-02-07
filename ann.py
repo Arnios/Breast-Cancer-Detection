@@ -1,4 +1,4 @@
-##### Importing the libraries #####
+############################################### Importing the libraries ###############################################
 
 import keras
 import numpy
@@ -6,7 +6,7 @@ import pandas
 import tensorflow
 import matplotlib.pyplot as plt
 
-from sklearn.svm import SVC
+from keras import callbacks
 from keras.layers import Dense
 from keras.models import Sequential
 from sklearn.metrics import roc_curve
@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-##### Importing data and splitting into test and train set #####
+################################ Importing data and splitting into train and test set #################################
 
 dataset = pandas.read_csv('data.csv')
 
@@ -29,68 +29,71 @@ X = StandardScaler().fit_transform(X) # Feature scaling
 Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
 
 X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = 0.20, random_state = 0) # Test-Train Split
-X_Train = PCA(n_components = 3).fit_transform(X_Train) 
-X_Test = PCA(n_components = 3).fit_transform(X_Test)
 
-##### Artifical Neural Network #####
+X_Train = PCA(n_components = 5).fit_transform(X_Train) # Principal Component Analysis on Training Set
+X_Test = PCA(n_components = 5).fit_transform(X_Test) # Principal Component Analysis on Test Set
 
-classifier = Sequential()
-classifier.add(Dense(2, kernel_initializer = 'uniform', activation = 'relu', input_dim = 3)) # First hidden layer
-classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
-classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+######################################################## Models ########################################################
 
-##### Cross Validation of Hyperparameters #####
+classifier_1 = Sequential()
+classifier_1.add(Dense(3, kernel_initializer = 'uniform', activation = 'relu', input_dim = 5)) # First hidden layer
+classifier_1.add(Dense(1, kernel_initializer = 'uniform', activation = 'relu')) # Output layer
+classifier_1.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = 'accuracy')
 
-score = pandas.DataFrame(columns = ['Batch Size', 'Number of Epochs', 'AUC Score'])
+classifier_2 = Sequential()
+classifier_2.add(Dense(3, kernel_initializer = 'uniform', activation = 'relu', input_dim = 5)) # First hidden layer
+classifier_2.add(Dense(2, kernel_initializer = 'uniform', activation = 'relu')) # Second hidden layer
+classifier_2.add(Dense(1, kernel_initializer = 'uniform', activation = 'relu')) # Output layer
+classifier_2.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = 'accuracy')
 
-for i in range(11) :
-    for j in [10, 20, 30, 40, 50]:
-    
-        classifier.fit(X_Train, Y_Train, batch_size = i, epochs = j)
-        fpr_classifier, tpr_classifier, thresholds_classifier = roc_curve(Y_Test, classifier.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
-        auc_score_classifier = roc_auc_score(Y_Test, classifier.predict(X_Test)) # AUC Score for Artifical Neural Network
-        score = score.append({'Batch Size' : i, 'Number of Epochs' : j, 'AUC Score' : auc_score_classifier}, ignore_index = True)
+#################################################### Ablation Study ##################################################
 
-print('Maximum AUC Score = %.4f' %score['AUC Score'].max())
-index = score.index[score['AUC Score'] == score['AUC Score'].max()]
-print('Optimum batch size = %d' %score['Batch Size'].loc[index])
-print('Optimum number of epochs : %d' %score['Number of Epochs'].loc[index])
+earlystopping = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 5, restore_best_weights = True, verbose = 1)
 
-##### Performance Evaluation with AUC-ROC Method #####
+classifier_1.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 50, callbacks = [earlystopping]) # Optimum epoch - 10 Validation Accuracy - 94.74%
+classifier_2.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 50, callbacks = [earlystopping]) # Optimum epoch - 20 Validation Accuracy - 94.74%
+
+history = classifier_1.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 50) # Validation Accuracy - 94.74%
+history = classifier_2.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 50) # Validation Accuracy - 92.98%
+
+training_loss = history.history['loss']
+test_loss = history.history['val_loss']
+
+epoch_count = range(1, len(training_loss) + 1) # Create count of the number of epochs
+
+# Visualize loss history
+
+plt.plot(epoch_count, training_loss, '--', color = 'red')
+plt.plot(epoch_count, test_loss, 'x', color = 'blue')
+plt.legend(['Training Loss', 'Test Loss'])
+plt.xlabel('Number of Epoch')
+plt.ylabel('Validation Loss')
+plt.show()
+
+##################################### Performance Evaluation with AUC-ROC Method ######################################
+
+classifier_1.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 10) # Validation Accuracy - 94.74%
+classifier_2.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 20) # Validation Accuracy - 92.98%
 
 random_probabilities = [0 for i in range(len(Y_Test))]
 fpr_noskill, tpr_noskill, _ = roc_curve(Y_Test, random_probabilities, pos_label = 1) # ROC curve for no skill approach
 
-fpr_ANN, tpr_ANN, thresholds_ANN = roc_curve(Y_Test, classifier.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
-auc_score_ANN = roc_auc_score(Y_Test, classifier.predict(X_Test)) # AUC Score for Artifical Neural Network
-print('AUC Score For Neural Network Model : %.3f' %auc_score_ANN)
+fpr_classifier_1, tpr_classifier_1, thresholds_classifier_1 = roc_curve(Y_Test, classifier_1.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
+auc_score_classifier_1 = roc_auc_score(Y_Test, classifier_1.predict(X_Test)) # AUC Score for Artifical Neural Network
 
-fpr_LRM, tpr_LRM, thresholds_LRM = roc_curve(Y_Test, LRM.predict(X_Test), pos_label = 1) # ROC curve for Logistic Regression Model
-auc_score_LRM = roc_auc_score(Y_Test, LRM.predict(X_Test)) # AUC Score for Logistic Regression
-print('AUC Score For Logistic Regression Model : %.3f' %auc_score_LRM)
+fpr_classifier_2, tpr_classifier_2, thresholds_classifier_2 = roc_curve(Y_Test, classifier_2.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
+auc_score_classifier_2 = roc_auc_score(Y_Test, classifier_2.predict(X_Test)) # AUC Score for Artifical Neural Network
 
-fpr_SVM, tpr_SVM, thresholds_SVM = roc_curve(Y_Test, SVM.predict(X_Test), pos_label = 1) # ROC curve for Support Vector Machines
-auc_score_SVM = roc_auc_score(Y_Test, SVM.predict(X_Test)) # AUC Score for Support Vector Machines
-print('AUC Score For SVM Model : %.3f' %auc_score_SVM)
+print('AUC Score of 2-Layer ANN : %.4f' %auc_score_classifier_1) # AUC Score = 98.29%
+print('AUC Score of 3-Layer ANN : %.4f' %auc_score_classifier_2) # AUC Score = 98.02%
 
-fpr_RF, tpr_RF, thresholds_RF = roc_curve(Y_Test, RF.predict(X_Test), pos_label = 1) # ROC curve for Random Forest
-auc_score_RF = roc_auc_score(Y_Test, RF.predict(X_Test)) # AUC Score for Random Forest
-print('AUC Score For Random Forest Model : %.3f' %auc_score_RF)
-
-fpr_NB, tpr_NB, thresholds_NB = roc_curve(Y_Test, NB.predict(X_Test), pos_label = 1) # ROC curve for Naive Bayes Model
-auc_score_NB = roc_auc_score(Y_Test, NB.predict(X_Test)) # AUC Score for Naive Bayes
-print('AUC Score For Naive Bayes Model : %.3f' %auc_score_NB)
-
-###### Plot Result of AUC-ROC Curve #####
+############################################## Plot Result of AUC-ROC Curve ###########################################
 
 plt.title('AUC-ROC Curve')
 
 plt.plot(fpr_noskill, tpr_noskill, linestyle = '--', color = 'blue', label = 'No Skill')
-plt.plot(fpr_ANN, tpr_ANN, linestyle = '--', color = 'orange', label = 'Neural Network')
-plt.plot(fpr_LRM, tpr_LRM, linestyle = '--', color = 'brown', label = 'Logistic Regression')
-plt.plot(fpr_SVM, tpr_SVM, linestyle = '--', color = 'olive', label = 'SVM')
-plt.plot(fpr_RF, tpr_RF, linestyle = '--', color = 'lime', label = 'Random Forest')
-plt.plot(fpr_NB, tpr_NB, linestyle = '--', color = 'magenta', label = 'Naive Bayes')
+plt.plot(fpr_classifier_1, tpr_classifier_1, linestyle = '--', color = 'red', label = '2-Layer ANN')
+plt.plot(fpr_classifier_2, tpr_classifier_2, linestyle = '--', color = 'green', label = '3-Layer ANN')
 
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')
