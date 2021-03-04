@@ -3,6 +3,7 @@
 import keras
 import numpy
 import pandas
+import xgboost
 import seaborn
 import tensorflow
 import matplotlib.pyplot as plt
@@ -17,61 +18,66 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score,confusion_matrix
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-################################################# Data Visualization #################################################
-
-##### Importing data and Standardization #####
+##################################################### Importing dataset ###############################################
 
 dataset = pandas.read_csv('data.csv')
 
 X = dataset.drop(['id', 'diagnosis', 'Unnamed: 32'], axis = 1) # Independent variables
 Y = dataset.diagnosis # Dependant variables
-# X.mean().plot(kind = 'bar')
-# X = (X - X.mean()) / (X.std()) # Standardization of features
 
-##### Initial Correlation Matrix #####
+ax1 = seaborn.countplot(Y, label = 'Count')
+B, M = Y.value_counts()
+print('Number of Benign: ', B)
+print('Number of Malignant : ', M)
+
+ax2 = seaborn.lineplot(data = X.mean()) # Line plot of mean of individual features
+ax2.set(xticklabels = [])
+ax2.set(xlabel = 'Features')
+
+X = (X - X.min()) / (X.max() - X.min()) # Normalization of features
+
+###################################################### Feature Importance #############################################
+
+from sklearn.datasets import make_classification
+from sklearn.ensemble import RandomForestClassifier
+
+features = {}
+model = RandomForestClassifier()
+model.fit(X, Y)
+
+for a, b in zip(X.columns, model.feature_importances_):
+    features[a] = b 
+
+importances = pandas.DataFrame.from_dict(features, orient = 'index').rename(columns = {0: 'Importance'})
+
+importances.sort_values(by = 'Importance').plot(kind = 'bar', rot = 90)
+
+######################################### Swarm Plot of Insignificant Features ########################################
+
+# columns = ['smoothness_mean', 'compactness_mean', 'symmetry_mean']
+# columns = ['fractal_dimension_mean', 'radius_se', 'texture_se']
+# columns = ['smoothness_se', 'compactness_se', 'concavity_se']
+# columns = ['concave points_se', 'symmetry_se', 'fractal_dimension_se']
+# columns = ['symmetry_worst', 'fractal_dimension_worst']
+
+features = pandas.concat([Y, X[columns]], axis = 1)
+features = pandas.melt(features, id_vars = 'diagnosis', var_name = 'features', value_name = 'value')
+
+plot = seaborn.set(style = 'whitegrid', palette = 'muted')
+plot = seaborn.swarmplot(x = 'features', y = 'value', hue = 'diagnosis', data = features)
+
+############################################### Drop Insignificant Features ###########################################
+
+insignificant_features = ['smoothness_mean', 'compactness_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave points_se', 'symmetry_se', 'fractal_dimension_se', 'symmetry_worst', 'fractal_dimension_worst']
+X = X.drop(insignificant_features, axis = 1)
+dataset = pandas.concat([Y, X], axis = 1)
+
+############################################ Pearson Correlation Matrix ###############################################
 
 mask = numpy.zeros_like(X.corr())
 mask[numpy.triu_indices_from(mask)] = True
 
 with seaborn.axes_style("white") :
     
-    f, ax = plt.subplots(figsize=(18, 18))
-    ax = seaborn.heatmap(X.corr(), mask=mask, annot = True, linewidths = .5, fmt = '.1f', square=True)
-    
-##### Drawing Violin Plot and Box Plots #####
-
-# features = pandas.concat([Y, X.iloc[:, 0:3]], axis = 1)
-# features = pandas.melt(features, id_vars = 'diagnosis', var_name = 'features', value_name = 'value')
-# violinplot = seaborn.violinplot(x = 'value', y = 'features', hue = 'diagnosis', data = features, split = True, inner = "quart")
-# violinplot.set_xticklabels(violinplot.get_xticklabels(), rotation = 90)
-# boxplot = seaborn.boxplot(x = 'value', y = 'features', hue = "diagnosis", data = features)
-# boxplot.set_xticklabels(boxplot.get_xticklabels(), rotation = 90)
-
-##### Swarm Plots of first cohort of features #####
-
-# columns = ['radius_mean', 'perimeter_mean', 'area_mean', 'radius_worst', 'perimeter_worst']
-# columns = ['perimeter_mean', 'perimeter_worst', 'radius_worst', 'area_mean']
-# columns = ['area_mean', 'area_worst', 'perimeter_worst', 'radius_worst']
-# columns = ['radius_se', 'perimeter_se', 'area_se']
-# columns = ['radius_worst', 'perimeter_worst', 'area_worst']
-# columns = ['perimeter_worst', 'area_worst']
-
-# features = pandas.concat([Y, X[columns]], axis = 1)
-# features = pandas.melt(features, id_vars = 'diagnosis', var_name = 'features', value_name = 'value')
-
-# plot = seaborn.set(style = 'whitegrid', palette = 'muted')
-# plot = seaborn.swarmplot(x = 'features', y = 'value', hue = 'diagnosis', data = features)
-
-##### Dropping features after swarm plot analysis and drawing new correlation matrix #####
-
-features = ['radius_mean', 'radius_worst', 'perimeter_mean', 'area_mean', 'area_worst', 'radius_se', 'perimeter_se', 'radius_worst']
-X = X.drop(features, axis = 1)
-dataset = pandas.concat([Y, X], axis = 1)
-
-# mask = numpy.zeros_like(X.corr())
-# mask[numpy.triu_indices_from(mask)] = True
-
-# with seaborn.axes_style("white") :
-    
-#     f, ax = plt.subplots(figsize = (18, 18))
-#     ax = seaborn.heatmap(X.corr(), mask = mask, annot = True, linewidths = .5, fmt = '.1f', square = True)
+    f, ax = plt.subplots(figsize = (18, 18))
+    ax = seaborn.heatmap(X.corr(), mask = mask, annot = True, linewidths = .5, fmt = '.1f', square = True)
