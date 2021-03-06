@@ -30,10 +30,12 @@ Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variab
 
 ########################################## Comparison of traditional models ###########################################
 
-##### Naive Bayes #####
-
-from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 
 test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
 
@@ -41,19 +43,16 @@ for i in test_set_concentration :
     
     X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i, random_state = 0) # Test-Train Split
     
-    classifier = GaussianNB()
+    # classifier = GaussianNB() # Naive Bayes
+    classifier = LogisticRegression(random_state = 0) # Logistic Regression
+    # classifier = KNeighborsClassifier() # K-Nearest Neighbors
+    # classifier = SVC(random_state = 0) # Support Vector Machine
+    # classifier = RandomForestClassifier(random_state = 0) # Random Forest
+    
     classifier.fit(X_Train, Y_Train)
     
     Y_Prediction = classifier.predict(X_Test)
-    print('Validation accuracy : {:.4f}'.format(accuracy_score(Y_Test, Y_Prediction)))
-
-# Logistic Regression
-
-# K-Nearest Neighbors
-
-# Support Vector Machine
-
-# Random Forest
+    print('{}% test set concentration accuracy : {:.2f}'.format(i, 100*accuracy_score(Y_Test, Y_Prediction)))
 
 ###################################################### ANN Model ######################################################
 
