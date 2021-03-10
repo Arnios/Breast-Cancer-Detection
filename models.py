@@ -22,6 +22,8 @@ X = (X - X.min()) / (X.max() - X.min()) # Normalization of features
 Y = dataset['diagnosis'] # Dependant variables
 Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
 
+del dropped_features
+
 ########################################## Comparison of traditional models ###########################################
 
 from sklearn.svm import SVC
@@ -31,7 +33,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+test_set_concentration = [.10, .15, .20, .25, .30, .35, .40, .45, .50]
 
 for i in test_set_concentration :
     
@@ -46,7 +48,12 @@ for i in test_set_concentration :
     classifier.fit(X_Train, Y_Train)
     
     Y_Prediction = classifier.predict(X_Test)
-    print('{}% test set concentration accuracy : {:.2f}'.format(i, 100*accuracy_score(Y_Test, Y_Prediction)))
+    print('{:.2f}% test set concentration accuracy : {:.2f}'.format(100*i, 100*accuracy_score(Y_Test, Y_Prediction)))
+    
+    # Deleting Temporary Variables
+    
+    del classifier
+    del i, X_Train, X_Test, Y_Train, Y_Test, Y_Prediction
 
 ###################################################### ANN Model ######################################################
 
@@ -56,7 +63,7 @@ from keras.optimizers import SGD
 from keras.models import Sequential
 
 es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
-test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+test_set_concentration = [.35]
 
 for i in test_set_concentration :
     
@@ -82,6 +89,11 @@ for i in test_set_concentration :
     plt.xlabel('Number of Epoch')
     plt.ylabel('Validation Loss')
     plt.show()
+    
+    # Deleting temporary variables
+    
+    del classifier
+    del epoch_count, es, i, model_data, test_loss, training_loss, X_Test, X_Train, Y_Test, Y_Train
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
