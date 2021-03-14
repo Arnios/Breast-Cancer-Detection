@@ -1,9 +1,7 @@
 ############################################### Importing the libraries ###############################################
 
-import keras
 import numpy
 import pandas
-import tensorflow
 import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
@@ -33,29 +31,43 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
-test_set_concentration = [.10, .15, .20, .25, .30, .35, .40, .45, .50]
+test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+final_acc = pandas.DataFrame()
+  
+for j in range(0, 10) :
+    
+    interim_acc = pandas.DataFrame()
+    
+    for i in test_set_concentration :
+        
+        X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
+        
+        classifier = GaussianNB() # Naive Bayes    
+        # classifier = LogisticRegression(random_state = 0) # Logistic Regression
+        # classifier = KNeighborsClassifier() # K-Nearest Neighbors
+        # classifier = SVC(random_state = 0) # Support Vector Machine
+        # classifier = RandomForestClassifier(random_state = 0) # Random Forest
+        
+        classifier.fit(X_Train, Y_Train)
+        Y_Prediction = classifier.predict(X_Test)
 
-for i in test_set_concentration :
+        interim_acc = interim_acc.append({'Iteration - {}'.format(j+1) : accuracy_score(Y_Test, Y_Prediction)}, ignore_index = True)
+        
+        # Deleting Temporary Variables
+        
+        del classifier
+        del X_Train, X_Test, Y_Train, Y_Test, Y_Prediction
     
-    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i, shuffle = True, random_state = 0) # Test-Train Split
-    
-    # classifier = GaussianNB() # Naive Bayes
-    # classifier = LogisticRegression(random_state = 0) # Logistic Regression
-    # classifier = KNeighborsClassifier() # K-Nearest Neighbors
-    # classifier = SVC(random_state = 0) # Support Vector Machine
-    # classifier = RandomForestClassifier(random_state = 0) # Random Forest
-    
-    classifier.fit(X_Train, Y_Train)
-    
-    Y_Prediction = classifier.predict(X_Test)
-    print('{:.2f}% test set concentration accuracy : {:.2f}'.format(100*i, 100*accuracy_score(Y_Test, Y_Prediction)))
-    
-    # Deleting Temporary Variables
-    
-    del classifier
-    del i, X_Train, X_Test, Y_Train, Y_Test, Y_Prediction
+    final_acc = pandas.concat([final_acc, interim_acc], axis = 1)
+    del interim_acc
+            
+final_acc.to_csv('Validation Accuracy.csv')
+final_acc['Median'] = final_acc.median(axis = 1)
 
 ###################################################### ANN Model ######################################################
+
+import keras
+import tensorflow
 
 from keras import callbacks
 from keras.layers import Dense
@@ -64,7 +76,7 @@ from keras.models import Sequential
 
 es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
 test_set_concentration = [.35]
-
+    
 for i in test_set_concentration :
     
     X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i, shuffle = True, random_state = 0) # Test-Train Split
@@ -75,13 +87,11 @@ for i in test_set_concentration :
     classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
     model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
     
-    # Evaluation of the model
-    
+    # Plot
+
     training_loss = model_data.history['loss']
     test_loss = model_data.history['val_loss']
-    epoch_count = range(1, len(training_loss) + 1) # Create count of the number of epochs
-    
-    # Plot
+    epoch_count = range(1, len(training_loss) + 1)
 
     plt.plot(epoch_count, training_loss, '--', color = 'red')
     plt.plot(epoch_count, test_loss, '--', color = 'blue')
@@ -90,10 +100,9 @@ for i in test_set_concentration :
     plt.ylabel('Validation Loss')
     plt.show()
     
-    # Deleting temporary variables
-    
-    del classifier
-    del epoch_count, es, i, model_data, test_loss, training_loss, X_Test, X_Train, Y_Test, Y_Train
+# Deleting temporary variables
+        
+del classifier, epoch_count, es, i, model_data, test_loss, training_loss, X_Test, X_Train, Y_Test, Y_Train
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
