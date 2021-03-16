@@ -34,7 +34,7 @@ from sklearn.linear_model import LogisticRegression
 test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
 final_acc = pandas.DataFrame()
   
-for j in range(0, 10) :
+for j in range(0, 100) :
     
     interim_acc = pandas.DataFrame()
     
@@ -42,7 +42,7 @@ for j in range(0, 10) :
         
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
         
-        classifier = GaussianNB() # Naive Bayes    
+        # classifier = GaussianNB() # Naive Bayes    
         # classifier = LogisticRegression(random_state = 0) # Logistic Regression
         # classifier = KNeighborsClassifier() # K-Nearest Neighbors
         # classifier = SVC(random_state = 0) # Support Vector Machine
@@ -59,10 +59,12 @@ for j in range(0, 10) :
         del X_Train, X_Test, Y_Train, Y_Test, Y_Prediction
     
     final_acc = pandas.concat([final_acc, interim_acc], axis = 1)
-    del interim_acc
-            
+    del i, interim_acc
+
+del j
+
+final_acc['Median'] = final_acc.median(axis = 1)           
 final_acc.to_csv('Validation Accuracy.csv')
-final_acc['Median'] = final_acc.median(axis = 1)
 
 ###################################################### ANN Model ######################################################
 
@@ -74,35 +76,38 @@ from keras.layers import Dense
 from keras.optimizers import SGD
 from keras.models import Sequential
 
-es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
-test_set_concentration = [.35]
+for j in range(0, 1) :
     
-for i in test_set_concentration :
+    es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
+    test_set_concentration = [10]
     
-    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i, shuffle = True, random_state = 0) # Test-Train Split
-    
-    classifier = Sequential()
-    classifier.add(Dense(8, kernel_initializer = 'uniform', activation = 'relu', input_dim = 16)) # First hidden layer
-    classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
-    classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
-    model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
-    
-    # Plot
-
-    training_loss = model_data.history['loss']
-    test_loss = model_data.history['val_loss']
-    epoch_count = range(1, len(training_loss) + 1)
-
-    plt.plot(epoch_count, training_loss, '--', color = 'red')
-    plt.plot(epoch_count, test_loss, '--', color = 'blue')
-    plt.legend(['Training Loss', 'Test Loss'])
-    plt.xlabel('Number of Epoch')
-    plt.ylabel('Validation Loss')
-    plt.show()
-    
-# Deleting temporary variables
+    for i in test_set_concentration :
         
-del classifier, epoch_count, es, i, model_data, test_loss, training_loss, X_Test, X_Train, Y_Test, Y_Train
+        X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
+        
+        classifier = Sequential()
+        classifier.add(Dense(8, kernel_initializer = 'uniform', activation = 'relu', input_dim = 16)) # First hidden layer
+        classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
+        classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
+        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
+        pandas.DataFrame(model_data.history['val_accuracy']).to_csv('{} Iteration - {}%.csv'.format(i, j))
+        
+        # Plot
+    
+        training_loss = model_data.history['loss']
+        test_loss = model_data.history['val_loss']
+        epoch_count = range(1, len(training_loss) + 1)
+    
+        plt.plot(epoch_count, training_loss, '--', color = 'red')
+        plt.plot(epoch_count, test_loss, '--', color = 'blue')
+        plt.legend(['Training Loss', 'Test Loss'])
+        plt.xlabel('Number of Epoch')
+        plt.ylabel('Validation Loss')
+        plt.show()
+        
+        # Deleting temporary variables
+                
+        del X_Test, X_Train, Y_Test, Y_Train, classifier, epoch_count, es, i, model_data, test_loss, training_loss
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
