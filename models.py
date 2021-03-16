@@ -76,12 +76,14 @@ from keras.layers import Dense
 from keras.optimizers import SGD
 from keras.models import Sequential
 
-for j in range(0, 1) :
+test_set_concentration = [10]
+accuracy_history = pandas.DataFrame()
+
+for i in test_set_concentration :
     
     es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
-    test_set_concentration = [10]
     
-    for i in test_set_concentration :
+    for j in range(0, 2) :
         
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
         
@@ -89,25 +91,33 @@ for j in range(0, 1) :
         classifier.add(Dense(8, kernel_initializer = 'uniform', activation = 'relu', input_dim = 16)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
         classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
+        
         model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
-        pandas.DataFrame(model_data.history['val_accuracy']).to_csv('{} Iteration - {}%.csv'.format(i, j))
+    
+        very_temporary_history = pandas.DataFrame()
+    
+        temporary_history = pandas.DataFrame(model_data.history['val_accuracy'], columns = ['Accuracy'])
+        very_temporary_history = very_temporary_history.append({'I-{}'.format(j + 1) : temporary_history['Accuracy'].iloc[-1]}, ignore_index = True)
+        accuracy_history = pandas.concat([accuracy_history, very_temporary_history], axis = 1)
         
         # Plot
     
-        training_loss = model_data.history['loss']
-        test_loss = model_data.history['val_loss']
-        epoch_count = range(1, len(training_loss) + 1)
+        # training_loss = model_data.history['loss']
+        # test_loss = model_data.history['val_loss']
+        # epoch_count = range(1, len(training_loss) + 1)
     
-        plt.plot(epoch_count, training_loss, '--', color = 'red')
-        plt.plot(epoch_count, test_loss, '--', color = 'blue')
-        plt.legend(['Training Loss', 'Test Loss'])
-        plt.xlabel('Number of Epoch')
-        plt.ylabel('Validation Loss')
-        plt.show()
+        # plt.plot(epoch_count, training_loss, '--', color = 'red')
+        # plt.plot(epoch_count, test_loss, '--', color = 'blue')
+        # plt.legend(['Training Loss', 'Test Loss'])
+        # plt.xlabel('Number of Epoch')
+        # plt.ylabel('Validation Loss')
+        # plt.show()
         
         # Deleting temporary variables
-                
-        del X_Test, X_Train, Y_Test, Y_Train, classifier, epoch_count, es, i, model_data, test_loss, training_loss
+        
+        del X_Test, X_Train, Y_Test, Y_Train, classifier, model_data
+        del temporary_history, very_temporary_history
+        # del training_loss, test_loss, epoch_count
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
