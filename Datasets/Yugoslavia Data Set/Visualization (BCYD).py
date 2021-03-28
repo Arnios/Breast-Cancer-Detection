@@ -1,68 +1,51 @@
-##################################### Importing dataset and Preliminary Analysis ######################################
+################################################# Importing dataset ##################################################
 
 import numpy
 import pandas
 import seaborn
 
-from sklearn import preprocessing
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-### Import Dataset and Split
-
-dataset = pandas.read_csv('breast-cancer.data', delimiter = ",", header = None, names = ['Class','age','menopause','tumor-size','inv-nodes','node-caps','deg-malig','breast','breast-quad','irradiat'])
-dataset_info = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
-
-for feature in dataset :
-    
-    if feature != 'deg-malig' :
-    
-        labelEncoder = preprocessing.LabelEncoder() # Label Encoder Instance
-        dataset[feature] = labelEncoder.fit_transform(dataset[feature]) # Fitting Label Encoder to all features except 'Age'
-
-del feature, labelEncoder
-
-X = dataset.drop(['Class'], axis = 1) # Independent variables
-Y = dataset.Class # Target variables
-
-### Line plot of mean of individual features ###
-
-ax = seaborn.lineplot(data = X.mean())
-ax.set(xticklabels = [])
-ax.set(xlabel = 'Features')
-
-del ax # Delete Temporary Variables
+dataset = pandas.read_csv('Data/breast-cancer.data', delimiter = ",", header = None, names = ['Class','age','menopause','tumor-size','inv-nodes','node-caps','deg-malig','breast','breast-quad','irradiat'])
+information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
 
 ### Understanding the distribution of the target variable among classes ###
 
-P, H = Y.value_counts()
+P, N = dataset['Class'].value_counts()
 print('Number of Patients : ', P)
-print('Number of Non-Patients : ', H)
-ax = seaborn.countplot(Y, label = 'Count')
+print('Number of Non-Patients : ', N)
+ax = seaborn.countplot(dataset['Class'], label = 'Count')
 
-del ax, P, H # Delete Temporary Variables
+del ax, P, N # Delete Temporary Variables
 
-############################################ Outlier Treatment and Normalization #####################################
+############################################### Encode Categorical Variable ##########################################
 
-dataset.columns = ['Age', 'BMI', 'Glucose', 'Insulin', 'HOMA', 'Leptin', 'Adiponectin', 'Resistin', 'MCP1', 'Classification'] # Reformat Column Names
-# dataset.boxplot(column = 'Age', vert = True) # Box and Whisker Plot of feature
+X = pandas.DataFrame()
 
-for i in dataset.columns :
+for feature in dataset.columns :
     
-    if i != 'Age' and i != 'BMI' and i != 'Classification' :
+    if feature != 'Class' and feature != 'breast' and feature != 'irradiat' :
     
-        Q1 = dataset[i].quantile(0.25) # First Quartile
-        Q3 = dataset[i].quantile(0.75) # Third Quartile
-        IQR = Q3 - Q1 # Interquartile Range
+        temporary = pandas.get_dummies(dataset[feature])
+        X = pandas.concat([X, temporary], axis = 1)
+        dataset.drop(feature, axis = 1, inplace = True)
         
-        # Filtering Values between (Q1-1.5IQR) and (Q3+1.5IQR)
-        dataset.query('(@Q1 - 1.5 * @IQR) <= {} <= (@Q3 + 1.5 * @IQR)'.format(i), inplace = True)
+    else :
         
-        del Q1, Q3, IQR # Delete Temporary Variables
+        LE = LabelEncoder() # LabelEncoder Instance
+        
+        temporary = dataset[feature]
+        temporary = LE.fit_transform(temporary)
+        temporary = pandas.DataFrame(data = temporary, columns = ['{}'.format(feature)])
+        
+        if feature == 'Class' :
+            
+            Y = pandas.DataFrame(data = temporary)
+        
+        else :
 
-del i # Delete Temporary Variables
-
-### Normalization of features ###
-X = (X - X.min()) / (X.max() - X.min())
-
+            X = pandas.concat([X, temporary], axis = 1)
+        
 ###################################################### Feature Importance #############################################
 
 from sklearn.datasets import make_classification
@@ -113,3 +96,49 @@ insignificant_features = ['Insulin']
 X = X.drop(insignificant_features, axis = 1)
 
 del insignificant_features # Delete Temporary Variables
+
+############################################ Principle Component Analysis ############################################
+
+##### Import libraries #####
+
+import numpy
+import pandas
+import seaborn
+import matplotlib.pyplot as plt
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+
+##### Importing data and splitting into test and train set #####
+
+dataset = pandas.read_csv('data.csv')
+features = ['id', 'diagnosis', 'radius_mean', 'Unnamed: 32', 'radius_worst', 'perimeter_mean', 'area_mean', 'area_worst', 'radius_se', 'perimeter_se', 'radius_worst']
+
+X = dataset.drop(features, axis = 1) # Revised Independent Variable Set
+Y = dataset['diagnosis'] # Dependant variables
+
+X = StandardScaler().fit_transform(X) # Feature scaling
+Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
+
+X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = 0.20, random_state = 0) # Test-Train Split
+X_Train = StandardScaler().fit_transform(X_Train) 
+X_Test = StandardScaler().fit_transform(X_Test)
+
+##### Principal Component Analysis #####
+
+pca = PCA(n_components = None)
+
+X_Train = pca.fit_transform(X_Train) 
+X_Test = pca.fit_transform(X_Test)
+
+explained_variance = pca.explained_variance_ratio_
+
+##### Plot #####
+
+plt.figure(1, figsize = (18, 18))
+plt.plot(pca.explained_variance_ratio_, linewidth = 2)
+plt.axis('tight')
+plt.xlabel('Number of components')
+plt.ylabel('Explained Variance Ratio')

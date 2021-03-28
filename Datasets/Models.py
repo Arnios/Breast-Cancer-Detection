@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 ################################################### Importing data ###################################################
@@ -30,6 +29,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
 final_acc = pandas.DataFrame()
@@ -70,11 +70,16 @@ final_acc.to_csv('Validation Accuracy.csv')
 
 import keras
 import tensorflow
+import matplotlib.pyplot as plt
 
 from keras import callbacks
 from keras.layers import Dense
 from keras.optimizers import SGD
 from keras.models import Sequential
+from sklearn.model_selection import train_test_split
+
+X = numpy.asarray(X).astype('float32')
+Y = numpy.asarray(Y).astype('float32')
 
 test_set_concentration = [50]
 accuracy_history = pandas.DataFrame()
@@ -83,12 +88,12 @@ for i in test_set_concentration :
     
     es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
     
-    for j in range(0, 100) :
+    for j in range(0, 1) :
         
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
         
         classifier = Sequential()
-        classifier.add(Dense(8, kernel_initializer = 'uniform', activation = 'relu', input_dim = 16)) # First hidden layer
+        classifier.add(Dense(21, kernel_initializer = 'uniform', activation = 'relu', input_dim = 41)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
         classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
         
@@ -100,24 +105,24 @@ for i in test_set_concentration :
         very_temporary_history = very_temporary_history.append({'I-{}'.format(j + 1) : temporary_history['Accuracy'].iloc[-1]}, ignore_index = True)
         accuracy_history = pandas.concat([accuracy_history, very_temporary_history], axis = 1)
         
-        # Plot
+        # Loss Plot
     
-        # training_loss = model_data.history['loss']
-        # test_loss = model_data.history['val_loss']
-        # epoch_count = range(1, len(training_loss) + 1)
+        training_loss = model_data.history['loss']
+        test_loss = model_data.history['val_loss']
+        epoch_count = range(1, len(training_loss) + 1)
     
-        # plt.plot(epoch_count, training_loss, '--', color = 'red')
-        # plt.plot(epoch_count, test_loss, '--', color = 'blue')
-        # plt.legend(['Training Loss', 'Test Loss'])
-        # plt.xlabel('Number of Epoch')
-        # plt.ylabel('Validation Loss')
-        # plt.show()
+        plt.plot(epoch_count, training_loss, '--', color = 'red')
+        plt.plot(epoch_count, test_loss, '--', color = 'blue')
+        plt.legend(['Training Loss', 'Test Loss'])
+        plt.xlabel('Number of Epoch')
+        plt.ylabel('Validation Loss')
+        plt.show()
         
         # Deleting temporary variables
         
         del X_Test, X_Train, Y_Test, Y_Train, classifier, model_data
         del temporary_history, very_temporary_history
-        # del training_loss, test_loss, epoch_count
+        del training_loss, test_loss, epoch_count
       
     # Print the result in a CSV File
     
