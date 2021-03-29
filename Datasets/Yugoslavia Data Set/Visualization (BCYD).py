@@ -3,6 +3,7 @@
 import numpy
 import pandas
 import seaborn
+import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
@@ -45,26 +46,70 @@ for feature in dataset.columns :
         else :
 
             X = pandas.concat([X, temporary], axis = 1)
+            
+del feature, temporary
         
 ###################################################### Feature Importance #############################################
 
 from sklearn.datasets import make_classification
 from sklearn.ensemble import RandomForestClassifier
 
-features = {}
-model = RandomForestClassifier()
-model.fit(X, Y)
+classifier = RandomForestClassifier()
+classifier.fit(X, Y)
 
-for a, b in zip(X.columns, model.feature_importances_):
-    features[a] = b 
+features = {} # Instantiating the dictionary
 
-importances = pandas.DataFrame.from_dict(features, orient = 'index').rename(columns = {0: 'Importance'})
-importances.sort_values(by = 'Importance').plot(kind = 'barh')
+for a, b in zip(X.columns, classifier.feature_importances_):
+    features[a] = 100 * b # Storing Feature Importance In Terms of Percentages in the dictionary
+
+importances = pandas.DataFrame.from_dict(features, orient = 'index').rename(columns = {0: 'Importance'}) # Creating a dataframe from the dictionary
+importances.to_csv('Feature Importance.csv') # Generating a CSV file from the Dataframe
 
 # Delete Temporary Variables
 
 del a, b
-del features, importances, model
+del features, classifier
+
+############################################ Principle Component Analysis ############################################
+
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+pca = PCA(n_components = None)
+
+X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = 0.20, random_state = 0) # Test-Train Split
+X_Train = StandardScaler().fit_transform(X_Train) 
+X_Test = StandardScaler().fit_transform(X_Test)
+X_Train = pca.fit_transform(X_Train) 
+X_Test = pca.fit_transform(X_Test)
+
+# explained_variance = pca.explained_variance_ratio_
+
+features = {} # Instantiating the dictionary
+
+for a, b in zip(X.columns, pca.explained_variance_ratio_):
+    features[a] = b # Storing Feature Importance In Terms of Percentages in the dictionary
+
+explained_variance = pandas.DataFrame.from_dict(features, orient = 'index').rename(columns = {0: 'Explained Variance'}) # Creating a dataframe from the dictionary
+explained_variance.to_csv('Explained Variance.csv') # Generating a CSV file from the Dataframe
+
+### Plot ###
+
+plt.figure(1, figsize = (18, 18))
+plt.plot(pca.explained_variance_ratio_, linewidth = 2)
+plt.axis('tight')
+plt.xlabel('Number of components')
+plt.ylabel('Explained Variance Ratio')
+
+# Delete Temporary Variables
+
+del X_Train, X_Test, Y_Train, Y_Test
+del pca, a, b, features, explained_variance
+
+############################################### Drop Insignificant Features ###########################################
+
+X = X[['20-29', '30-39', '40-49', '50-59', '60-69', '70-79', 'ge40', 'lt40', 'premeno', '0-4', '10-14', '15-19', '20-24', '25-29', '30-34']]
 
 ######################################### Swarm Plot of Insignificant Features ########################################
 
@@ -89,56 +134,3 @@ with seaborn.axes_style("white") :
     
     f, ax = plt.subplots(figsize = (18, 18))
     ax = seaborn.heatmap(X.corr(), mask = mask, annot = True, linewidths = .5, fmt = '.1f', square = True)
-    
-############################################### Drop Insignificant Features ###########################################
-
-insignificant_features = ['Insulin']
-X = X.drop(insignificant_features, axis = 1)
-
-del insignificant_features # Delete Temporary Variables
-
-############################################ Principle Component Analysis ############################################
-
-##### Import libraries #####
-
-import numpy
-import pandas
-import seaborn
-import matplotlib.pyplot as plt
-
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-
-##### Importing data and splitting into test and train set #####
-
-dataset = pandas.read_csv('data.csv')
-features = ['id', 'diagnosis', 'radius_mean', 'Unnamed: 32', 'radius_worst', 'perimeter_mean', 'area_mean', 'area_worst', 'radius_se', 'perimeter_se', 'radius_worst']
-
-X = dataset.drop(features, axis = 1) # Revised Independent Variable Set
-Y = dataset['diagnosis'] # Dependant variables
-
-X = StandardScaler().fit_transform(X) # Feature scaling
-Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
-
-X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = 0.20, random_state = 0) # Test-Train Split
-X_Train = StandardScaler().fit_transform(X_Train) 
-X_Test = StandardScaler().fit_transform(X_Test)
-
-##### Principal Component Analysis #####
-
-pca = PCA(n_components = None)
-
-X_Train = pca.fit_transform(X_Train) 
-X_Test = pca.fit_transform(X_Test)
-
-explained_variance = pca.explained_variance_ratio_
-
-##### Plot #####
-
-plt.figure(1, figsize = (18, 18))
-plt.plot(pca.explained_variance_ratio_, linewidth = 2)
-plt.axis('tight')
-plt.xlabel('Number of components')
-plt.ylabel('Explained Variance Ratio')

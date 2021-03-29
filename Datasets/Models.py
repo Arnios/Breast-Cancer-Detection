@@ -78,10 +78,10 @@ from keras.optimizers import SGD
 from keras.models import Sequential
 from sklearn.model_selection import train_test_split
 
-X = numpy.asarray(X).astype('float32')
-Y = numpy.asarray(Y).astype('float32')
+# X = numpy.asarray(X).astype('float32')
+# Y = numpy.asarray(Y).astype('float32')
 
-test_set_concentration = [50]
+test_set_concentration = [10]
 accuracy_history = pandas.DataFrame()
 
 for i in test_set_concentration :
@@ -93,7 +93,7 @@ for i in test_set_concentration :
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
         
         classifier = Sequential()
-        classifier.add(Dense(21, kernel_initializer = 'uniform', activation = 'relu', input_dim = 41)) # First hidden layer
+        classifier.add(Dense(5, kernel_initializer = 'uniform', activation = 'relu', input_dim = 9)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
         classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
         

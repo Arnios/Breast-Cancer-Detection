@@ -1,13 +1,21 @@
-##################################### Importing dataset and Preliminary Analysis ######################################
+################################################### Importing dataset ################################################
+
+### Importing Libraries ###
 
 import numpy
 import pandas
 import seaborn
 
-### Import Dataset and Split
+### Import Dataset ###
 
-dataset = pandas.read_csv('dataR2.csv')
-dataset_info = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
+dataset = pandas.read_csv('Data/dataR2.csv')
+dataset.columns = ['Age', 'BMI', 'Glucose', 'Insulin', 'HOMA', 'Leptin', 'Adiponectin', 'Resistin', 'MCP1', 'Classification'] # Reformat Column Names
+datasetinfo = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
+
+X = pandas.DataFrame()
+Y = pandas.DataFrame()
+
+################################################### Preliminary Analysis #############################################
 
 ### Line plot of mean of individual features ###
 
@@ -26,31 +34,36 @@ ax = seaborn.countplot(Y, label = 'Count')
 
 del ax, P, H # Delete Temporary Variables
 
+### Box and Whisker Plot of feature ###
+
+dataset.boxplot(column = 'Adiponectin', vert = True)
+
 ############################################ Outlier Treatment and Normalization #####################################
 
-dataset.columns = ['Age', 'BMI', 'Glucose', 'Insulin', 'HOMA', 'Leptin', 'Adiponectin', 'Resistin', 'MCP1', 'Classification'] # Reformat Column Names
-# dataset.boxplot(column = 'Age', vert = True) # Box and Whisker Plot of feature
-
-for i in dataset.columns :
+for feature in dataset :
     
-    if i != 'Age' and i != 'BMI' and i != 'Classification' :
+    if feature != 'Classification' :
     
-        Q1 = dataset[i].quantile(0.25) # First Quartile
-        Q3 = dataset[i].quantile(0.75) # Third Quartile
+        Q1 = dataset[feature].quantile(0.25) # First Quartile
+        Q3 = dataset[feature].quantile(0.75) # Third Quartile
         IQR = Q3 - Q1 # Interquartile Range
         
-        # Filtering Values between (Q1-1.5IQR) and (Q3+1.5IQR)
-        dataset.query('(@Q1 - 1.5 * @IQR) <= {} <= (@Q3 + 1.5 * @IQR)'.format(i), inplace = True)
-        
+        dataset.query('(@Q1 - 1.5*@IQR) <= {} <= (@Q3 + 1.5*@IQR)'.format(feature), inplace = True) # Filtering Values between (Q1-1.5IQR) and (Q3+1.5IQR)
+            
         del Q1, Q3, IQR # Delete Temporary Variables
 
-del i # Delete Temporary Variables
+del feature # Delete Temporary Variables
 
-X = dataset.drop(['Classification'], axis = 1) # Independent variables
-Y = dataset.Classification # Target variables
+### Datatype Conversion and Normalization of features ###
 
-### Normalization of features ###
-X = (X - X.min()) / (X.max() - X.min())
+Y['Classification'] = dataset['Classification'] # Target variables
+dataset = dataset.drop(['Classification'], axis = 1)
+X = dataset
+
+Y = numpy.asarray(Y).astype('float32')
+X = numpy.asarray(X).astype('float32')
+
+X = (X - X.min()) / (X.max() - X.min()) # Normalization
 
 ###################################################### Feature Importance #############################################
 
