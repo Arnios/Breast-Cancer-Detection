@@ -47,29 +47,44 @@ from sklearn.feature_selection import f_classif
 from sklearn.feature_selection import SelectKBest
 from sklearn.model_selection import train_test_split
 
-# feature selection
+test_set_concentration = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+anova_fs_scores = pandas.DataFrame()
 
-def select_features(X_train, y_train, X_test) :
-	
-	fs = SelectKBest(score_func = f_classif, k = 'all') # Select all features
-	fs.fit(X_train, y_train) # Learn relationship from training data
-	X_train_fs = fs.transform(X_train) # Transform train input data
-	X_test_fs = fs.transform(X_test) # Transform test input data
-	return X_train_fs, X_test_fs, fs
+### Define feature selection function ###
 
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size = 0.33, random_state = 1) # Split data into train and test sets
-X_train_fs, X_test_fs, fs = select_features(X_train, y_train, X_test) # Feature selection function
-
-# Obtain the scores
-
-for i in range(len(fs.scores_)) :
+def select_features(X_Train, Y_Train, X_Test) :
     
-	print('Feature %d : %f' % (i, fs.scores_[i]))
+    fs = SelectKBest(score_func = f_classif, k = 'all') # Select all features
+    fs.fit(X_Train, Y_Train) # Learn relationship from training data
+    X_Train_fs = fs.transform(X_Train) # Transform train input data
+    X_Test_fs = fs.transform(X_Test) # Transform test input data
+    return X_Train_fs, X_Test_fs, fs
 
-# Plot the scores
+### Conduct ANOVA F-Test for varying test case concentration
 
-pyplot.bar([i for i in range(len(fs.scores_))], fs.scores_)
-pyplot.show()
+for i in test_set_concentration :
+
+    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, random_state = 1) # Split data into train and test sets
+    X_Train_fs, X_Test_fs, fs = select_features(X_Train, Y_Train, X_Test) # Feed data into feature selection function
+    
+    ### Obtain Feature Importance Score ###
+    
+    features = {}
+    for a, b in zip(X.columns, fs.scores_) :
+        features[a] = b
+    
+    importances = pandas.DataFrame.from_dict(features, orient = 'index').rename(columns = {0: 'Importance'})
+    anova_fs_scores = pandas.concat([anova_fs_scores, importances], axis = 1)
+
+### Delete Temporary Variables ###
+
+del importances, test_set_concentration, fs, a, b, i
+del X_Train, X_Test, Y_Train, Y_Test, X_Train_fs, X_Test_fs, features
+
+### Calculate the median importance of each feature ###
+
+anova_fs_scores['Median'] = anova_fs_scores.median(axis = 1)
+anova_fs_scores['Median'].sort_values(ascending = False).plot(kind = 'bar', rot = 90)
 
 ############################################ Outlier Treatment and Normalization #####################################
 
