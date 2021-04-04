@@ -34,11 +34,11 @@ ax = seaborn.countplot(Y, label = 'Count')
 
 del ax, P, H # Delete Temporary Variables
 
+############################################ Outlier Treatment and Normalization #####################################
+
 ### Box and Whisker Plot of feature ###
 
 dataset.boxplot(column = 'Adiponectin', vert = True)
-
-############################################ Outlier Treatment and Normalization #####################################
 
 for feature in dataset :
     
