@@ -21,7 +21,7 @@ import pandas
 import seaborn
 
 dataset = pandas.read_csv('wdbc.data', delimiter = ",", header = None, names = ['ID_number', 'Diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean', 'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst'])
-information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
+# information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
 
 ################################################# Understanding the data #############################################
 
@@ -53,6 +53,30 @@ for feature, num in zip(X.columns, range(1, 31)) :
     ax.set_yticks([])
 
 plt.show()
+
+### Pearson Correlation Matrix ###
+
+mask = numpy.zeros_like(X.corr())
+mask[numpy.triu_indices_from(mask)] = True
+
+with seaborn.axes_style("white") :
+    
+    f, ax = plt.subplots(figsize = (18, 18))
+    ax = seaborn.heatmap(X.corr(), mask = mask, annot = True, linewidths = .5, fmt = '.1f', square = True)
+    
+### Swarm Plot Analysis ###
+
+columns = ['smoothness_mean', 'compactness_mean', 'symmetry_mean']
+columns = ['fractal_dimension_mean', 'radius_se', 'texture_se']
+columns = ['smoothness_se', 'compactness_se', 'concavity_se']
+columns = ['concave points_se', 'symmetry_se', 'fractal_dimension_se']
+columns = ['symmetry_worst', 'fractal_dimension_worst']
+
+features = pandas.concat([Y, X[columns]], axis = 1)
+features = pandas.melt(features, id_vars = 'diagnosis', var_name = 'features', value_name = 'value')
+
+plot = seaborn.set(style = 'whitegrid', palette = 'muted')
+plot = seaborn.swarmplot(x = 'features', y = 'value', hue = 'diagnosis', data = features)
 
 ### Deleting Temporary Variables ###
 
@@ -138,11 +162,13 @@ for i in test_set_concentration :
 
     ### Plot ###
     
-    # plt.figure(1, figsize = (18, 18))
-    # plt.plot(pca.explained_variance_ratio_, linewidth = 2)
-    # plt.axis('tight')
-    # plt.xlabel('Number of components')
-    # plt.ylabel('Explained Variance Ratio')
+    plt.figure(1, figsize = (18, 18))
+    plt.plot(pca.explained_variance_ratio_, linewidth = 2, label = '{}%'.format(i))
+    plt.axis('tight')
+    plt.xlabel('Number of components', fontsize = 30, labelpad = 25)
+    plt.ylabel('Explained Variance Ratio', fontsize = 30, labelpad = 25)
+    plt.tick_params(axis = 'both', which = 'major', labelsize = 25)
+    plt.legend(loc = 'upper right', prop = {'size': 30})
     
 ### Delete Temporary Variables ###
 
@@ -152,8 +178,9 @@ del pca, importances, test_set_concentration
 
 ### Calculate the median importance of each feature ###
 
-pca_scores['Mean'] = pca_scores.mean(axis = 1)
-pca_scores['Mean'].sort_values(ascending = False).plot(kind = 'bar', rot = 90)
+pca_scores['Median'] = pca_scores.mean(axis = 1)
+pca_scores.to_csv('PCA.csv') # Transfer to CSV
+# pca_scores['Median'].sort_values(ascending = False).plot(kind = 'bar', rot = 90) # Plot
 
 ######################################################### ANOVA F-Test ###############################################
 
@@ -201,15 +228,7 @@ del X_Train, X_Test, Y_Train, Y_Test, X_Train_fs, X_Test_fs, features
 anova_fs_scores['Mean'] = anova_fs_scores.mean(axis = 1)
 anova_fs_scores['Mean'].sort_values(ascending = False).plot(kind = 'bar', rot = 90)
 
-############################################### Drop Insignificant Features ###########################################
-
-insignificant_features = ['smoothness_mean', 'compactness_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave points_se', 'symmetry_se', 'fractal_dimension_se', 'symmetry_worst', 'fractal_dimension_worst']
-X = X.drop(insignificant_features, axis = 1)
-dataset = pandas.concat([Y, X], axis = 1)
-
-###################################################### Feature Importance #############################################
-
-### Chi Squared Test ###
+###################################################### Chi Squared Test ##############################################
 
 from scipy.stats import chi2
 from scipy.stats import chi2_contingency
@@ -222,7 +241,7 @@ columns = ['Gender', 'Country', 'self_employed', 'family_history',
            'mental_health_interview', 'phys_health_interview',
            'mental_vs_physical', 'obs_consequence']
 
-# Define Chi-Squared Test Parameters
+### Define Chi-Squared Test Parameters ###
 
 prob = 0.95
 alpha = 1.0 - prob
@@ -230,7 +249,7 @@ alpha = 1.0 - prob
 table = pandas.crosstab(dataset['Diagnosis'], dataset['radius mean'], margins = False)
 stat, p, dof, expected = chi2_contingency(table)
 
-# Interpret Test statistic and cross check with inference via p-value
+### Interpret Test statistic and cross check with inference via p-value ###
 
 critical = chi2.ppf(prob, dof)
 
@@ -267,26 +286,8 @@ importances = pandas.DataFrame.from_dict(features, orient = 'index').rename(colu
 
 importances.sort_values(by = 'Importance').plot(kind = 'bar', rot = 90)
 
-################################################# Swarm Plot Analysis ################################################
+################################################# Drop Irrelevant Features ###########################################
 
-# columns = ['smoothness_mean', 'compactness_mean', 'symmetry_mean']
-# columns = ['fractal_dimension_mean', 'radius_se', 'texture_se']
-# columns = ['smoothness_se', 'compactness_se', 'concavity_se']
-# columns = ['concave points_se', 'symmetry_se', 'fractal_dimension_se']
-# columns = ['symmetry_worst', 'fractal_dimension_worst']
-
-features = pandas.concat([Y, X[columns]], axis = 1)
-features = pandas.melt(features, id_vars = 'diagnosis', var_name = 'features', value_name = 'value')
-
-plot = seaborn.set(style = 'whitegrid', palette = 'muted')
-plot = seaborn.swarmplot(x = 'features', y = 'value', hue = 'diagnosis', data = features)
-
-############################################ Pearson Correlation Matrix ###############################################
-
-mask = numpy.zeros_like(X.corr())
-mask[numpy.triu_indices_from(mask)] = True
-
-with seaborn.axes_style("white") :
-    
-    f, ax = plt.subplots(figsize = (18, 18))
-    ax = seaborn.heatmap(X.corr(), mask = mask, annot = True, linewidths = .5, fmt = '.1f', square = True)
+irrelevant_features = ['smoothness_mean', 'compactness_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave points_se', 'symmetry_se', 'fractal_dimension_se', 'symmetry_worst', 'fractal_dimension_worst']
+X = X.drop(irrelevant_features, axis = 1)
+dataset = pandas.concat([Y, X], axis = 1)
