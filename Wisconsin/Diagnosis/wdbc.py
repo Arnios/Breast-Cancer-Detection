@@ -7,26 +7,26 @@ import matplotlib.pyplot as plt
 
 ##################################################### Importing dataset ###############################################
 
+from sklearn.preprocessing import LabelEncoder
+
 dataset = pandas.read_csv('wdbc.data', delimiter = ",", header = None, names = ['ID_number', 'Diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean', 'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst'])
 information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
 
-####################################################### Split Dataset ################################################
-
-from sklearn.preprocessing import LabelEncoder
-
 X = dataset.drop(['ID_number', 'Diagnosis'], axis = 1) # Independent variables
-Y = dataset.Diagnosis # Dependant variables
+Y = dataset['Diagnosis'] # Dependant variables
 
-### Normalization ###
+X = (X - X.min()) / (X.max() - X.min()) # Min-Max Normalization
+Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
 
-X = (X - X.min()) / (X.max() - X.min())
+X = numpy.asarray(X).astype('float32')
+Y = numpy.asarray(Y).astype('float32')
 
 ################################################# Principal Component Analysis ##########################################
 
 for i in range(10, 55, 5) :
 
     X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, random_state = 1) # Split data into train and test sets
-    X_Train, X_Test, plt = pca(X_Train, X_Test, None) # Type None for all features
+    pca(X_Train, X_Test, None, i) # Type None for all features
     
     del X_Train, X_Test, Y_Train, Y_Test # Deleting Temporary Variables
     
@@ -34,10 +34,10 @@ del i
 
 ######################################################### ANOVA F-Test ################################################
 
-for i in range(10, 55, 5) :
+for i in range(10, 55, 5) :    
 
     X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, random_state = 1) # Split data into train and test sets
-    X_Train, X_Test = anova(X_Train, Y_Train, X_Test, 'all') # Type all for all features
+    anova(X_Train, Y_Train, X_Test, 'all') # Type all for all features
     
     del X_Train, X_Test, Y_Train, Y_Test # Deleting Temporary Variables
     

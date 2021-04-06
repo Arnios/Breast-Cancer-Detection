@@ -19,7 +19,6 @@ Y = numpy.asarray(Y).astype('float32')
 
 ######################################################### DNN Model ###################################################
 
-test_set_concentration = [50]
 accuracy_history = pandas.DataFrame()
 
 for i in range(10, 55, 5) :
@@ -32,7 +31,7 @@ for i in range(10, 55, 5) :
         
         ### Define Hyperparameters ###
         
-        inputs = 30
+        inputs = 25
         
         ### Neural Network ###
         
@@ -42,8 +41,11 @@ for i in range(10, 55, 5) :
         classifier.add(Dense(inputs, kernel_initializer = 'uniform', activation = 'relu', input_dim = inputs)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
         
-        classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
+        ### Call ANOVA ###
         
+        X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Type all for all features
+        
+        classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
         model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
 
         ### Store History ###
@@ -68,14 +70,14 @@ for i in range(10, 55, 5) :
         
         ### Deleting temporary variables ###
         
-        del X_Test, X_Train, Y_Test, Y_Train, classifier, model_data
-        del temporary_history, very_temporary_history
-        del training_loss, test_loss, epoch_count
+        # del X_Test, X_Train, Y_Test, Y_Train, classifier, model_data
+        # del temporary_history, very_temporary_history
+        # del training_loss, test_loss, epoch_count
       
     ### Print the result in a CSV File ###
     
     accuracy_history['Median'] = accuracy_history.median(axis = 1)
-    accuracy_history.to_csv('Result - {}%.csv'.format(i))
+    # accuracy_history.to_csv('Result - {}%.csv'.format(i))
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
