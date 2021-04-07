@@ -1,5 +1,6 @@
 ################################################## Importing libraries ###############################################
 
+import math
 import keras
 import tensorflow
 import matplotlib.pyplot as plt
@@ -8,18 +9,28 @@ from keras import callbacks
 from keras.layers import Dense
 from keras.optimizers import SGD
 from keras.models import Sequential
+from keras.callbacks import LearningRateScheduler
 from sklearn.model_selection import train_test_split
 
-####################################################### Data Preprocess ###############################################
+######################################################### ANN Model ###################################################
 
-Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
+### Define Learning Rate Schedule Function ###
 
-X = numpy.asarray(X).astype('float32')
-Y = numpy.asarray(Y).astype('float32')
+def step_decay(epoch) :
+    
+    ### Define Hyperparameters ###
+    
+	initial_lrate = 0.1
+	drop = 0.5
+	epochs_drop = 10
+    
+	lrate = initial_lrate * math.pow(drop, math.floor((1 + epoch)/epochs_drop)) # Equation to calculate new Learning Rate
+    
+	return lrate
 
-######################################################### DNN Model ###################################################
+### Defining the Model ###
 
-accuracy_history = pandas.DataFrame()
+accuracy_history = pandas.DataFrame() # Store Final Accuracy Data
 
 for i in range(10, 55, 5) :
     
@@ -33,21 +44,32 @@ for i in range(10, 55, 5) :
         
         inputs = 25
         
-        ### Neural Network ###
+        # opt = SGD() # Default SGD with Learning Rate = 0.01
+        # opt = SGD(learning_rate = 0.001) # Learning Rate = 0.001
+        opt = SGD(learning_rate = 0.0) # For use in Adaptive Learning Rate Model and Learning Rate = 0.0 so that the LR defined is not used in the model
         
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
+        X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Calling ANOVA (Type 'all' for all features)
         
+        ### Neural Network ###
+       
         classifier = Sequential()
         classifier.add(Dense(inputs, kernel_initializer = 'uniform', activation = 'relu', input_dim = inputs)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
         
-        ### Call ANOVA ###
+        classifier.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = 'accuracy')
         
-        X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Type all for all features
+        ### Fit Neural Network To Data ###
         
-        classifier.compile(optimizer = 'SGD', loss = 'binary_crossentropy', metrics = 'accuracy')
-        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
-
+        # Default Model
+        
+        # model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
+        
+        # Adaptive Model
+        
+        lrate = LearningRateScheduler(step_decay)
+        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es, lrate])
+        
         ### Store History ###
 
         very_temporary_history = pandas.DataFrame()
@@ -81,24 +103,24 @@ for i in range(10, 55, 5) :
 
 ##################################### Performance Evaluation with AUC-ROC Method ######################################
 
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
+# from sklearn.metrics import roc_curve
+# from sklearn.metrics import roc_auc_score
 
-random_probabilities = [0 for i in range(len(Y_Test))]
-fpr_noskill, tpr_noskill, _ = roc_curve(Y_Test, random_probabilities, pos_label = 1) # ROC curve for no skill approach
+# random_probabilities = [0 for i in range(len(Y_Test))]
+# fpr_noskill, tpr_noskill, _ = roc_curve(Y_Test, random_probabilities, pos_label = 1) # ROC curve for no skill approach
 
-fpr_classifier_1, tpr_classifier_1, thresholds_classifier_1 = roc_curve(Y_Test, classifier_1.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
-auc_score_classifier_1 = roc_auc_score(Y_Test, classifier_1.predict(X_Test)) # AUC Score for Artifical Neural Network
-print('AUC Score of model : %.4f' %auc_score_classifier_1) # AUC Score = 98.29%
+# fpr_classifier_1, tpr_classifier_1, thresholds_classifier_1 = roc_curve(Y_Test, classifier_1.predict(X_Test), pos_label = 1) # ROC curve for the Artifical Neural Network
+# auc_score_classifier_1 = roc_auc_score(Y_Test, classifier_1.predict(X_Test)) # AUC Score for Artifical Neural Network
+# print('AUC Score of model : %.4f' %auc_score_classifier_1) # AUC Score = 98.29%
 
-# Plot
+# # Plot
 
-plt.title('AUC-ROC Curve')
+# plt.title('AUC-ROC Curve')
 
-plt.plot(fpr_noskill, tpr_noskill, linestyle = '--', color = 'blue', label = 'No Skill')
-plt.plot(fpr_classifier_1, tpr_classifier_1, linestyle = '--', color = 'red', label = 'Model')
+# plt.plot(fpr_noskill, tpr_noskill, linestyle = '--', color = 'blue', label = 'No Skill')
+# plt.plot(fpr_classifier_1, tpr_classifier_1, linestyle = '--', color = 'red', label = 'Model')
 
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.legend(loc = 'lower right')
-plt.show()
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.legend(loc = 'lower right')
+# plt.show()
