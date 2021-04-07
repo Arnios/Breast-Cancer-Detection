@@ -13,12 +13,11 @@ dataset = pandas.read_csv('wdbc.data', delimiter = ",", header = None, names = [
 information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
 
 X = dataset.drop(['ID_number', 'Diagnosis'], axis = 1) # Independent variables
-Y = dataset['Diagnosis'] # Dependant variables
-
 X = (X - X.min()) / (X.max() - X.min()) # Min-Max Normalization
-Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
-
 X = numpy.asarray(X).astype('float32')
+
+Y = dataset['Diagnosis'] # Dependant variables
+Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
 Y = numpy.asarray(Y).astype('float32')
 
 ################################################# Principal Component Analysis ##########################################

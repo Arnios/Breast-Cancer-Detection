@@ -24,7 +24,7 @@ def get_stacking() :
     level0.append(('LR', LogisticRegression()))
     level0.append(('KNN', KNeighborsClassifier()))
     level0.append(('SVM', SVC()))
-    level0.append(('RF', RandomForestClassifier()))
+    level0.append(('RF', RandomForestClassifier(random_state = 0)))
     
     # Define Level-1 meta learner model
     
@@ -50,28 +50,36 @@ accuracy = pandas.DataFrame()
   
 for concentration in range(10, 55, 5) :
     
-    inputs = 25 # Define number of inputs to be fed to the model
-    specific_accuracy = pandas.DataFrame() # Acuuracy obtained for a particular test set concentration
-        
-    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = concentration/100, shuffle = True, random_state = 0) # Test-Train Split
-    X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Feed Data To ANOVA / Type all for all features
+    # Define Parameters
     
-    # classifier = GaussianNB() # Naive Bayes    
-    # classifier = LogisticRegression(random_state = 0) # Logistic Regression
-    # classifier = KNeighborsClassifier() # K-Nearest Neighbors
-    # classifier = SVC() # Support Vector Machine
-    # classifier = RandomForestClassifier(random_state = 0) # Random Forest
+    inputs = 25 # Number of features to be fed to the model
+    specific_accuracy = pandas.DataFrame() # Dataframe to store accuracy obtained for a particular test set concentration
+      
+    # Split Data into Train and Test Set
+    
+    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = concentration/100, shuffle = True, random_state = 0) # Test-Train Split
+    X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Feed Data To ANOVA (Type all for all features)
+    
+    # Define Model
+    
+    # classifier = GaussianNB()
+    # classifier = LogisticRegression()
+    # classifier = KNeighborsClassifier()
+    # classifier = SVC()
+    # classifier = RandomForestClassifier(random_state = 0)
     classifier = get_stacking() # Call the Stacking Ensemble Model
+    
+    # Fit data to classifier and make Predictions
     
     classifier.fit(X_Train, Y_Train) # Fit data into model
     Y_Prediction = classifier.predict(X_Test) # Test Prediction ability on test set
-
     specific_accuracy = specific_accuracy.append({'{}%'.format(concentration) : accuracy_score(Y_Test, Y_Prediction)}, ignore_index = True)
-    
     accuracy = pandas.concat([accuracy, specific_accuracy], axis = 1) # Concat to Global Dataframe
     
     # Deleting Temporary Variables
     
     del classifier, specific_accuracy
           
-# accuracy.to_csv('Results.csv') # Transfer to CSV File
+# Transfer Prediction Accuracy Data Into CSV File
+
+accuracy.to_csv('Results.csv')
