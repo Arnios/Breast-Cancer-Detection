@@ -18,14 +18,14 @@ def select_features(X_Train, Y_Train, X_Test, num) :
     
     ### Plot Feature Scores (Larger the better) ###
     
-    fs.scores_.sort() # Sorting the F-score list in ascending order
+    # fs.scores_.sort() # Sorting the F-score list in ascending order
     
-    plt.figure(1, figsize = (18, 18))
-    plt.bar([x for x in range(len(fs.scores_))], fs.scores_)
-    plt.xlabel('Number of components', fontsize = 30, labelpad = 25)
-    plt.ylabel('ANOVA F-Score', fontsize = 30, labelpad = 25)
-    plt.tick_params(axis = 'both', which = 'major', labelsize = 25)
-    plt.show()
+    # plt.figure(1, figsize = (18, 18))
+    # plt.bar([x for x in range(len(fs.scores_))], fs.scores_)
+    # plt.xlabel('Number of components', fontsize = 30, labelpad = 25)
+    # plt.ylabel('ANOVA F-Score', fontsize = 30, labelpad = 25)
+    # plt.tick_params(axis = 'both', which = 'major', labelsize = 25)
+    # plt.show()
     
     return X_Train, X_Test
 

@@ -14,6 +14,13 @@ from sklearn.model_selection import train_test_split
 
 ######################################################### ANN Model ###################################################
 
+### Insert Parameters ###
+
+batch_size = 1 # Set Batch Size
+min_concentration = 10 # Minimum TEST SET Concentration
+max_concentration = 50 # Maximum TEST SET Concentration
+num_of_iterations = 100
+
 ### Define Learning Rate Schedule Function ###
 
 def step_decay(epoch) :
@@ -22,7 +29,7 @@ def step_decay(epoch) :
     
     initial_lrate = 0.1 # Setting an initially high learning rate
     epochs_drop = 10
-    drop = 0.5 # Learning rate Will drop by half
+    drop = 0.5 # Learning rate will drop by half
     
     lrate = initial_lrate * math.pow(drop, math.floor((1 + epoch)/epochs_drop)) # Equation to calculate new Learning Rate
     
@@ -32,10 +39,6 @@ def step_decay(epoch) :
 
 accuracy_summary = pandas.DataFrame()
 epoch_summary = pandas.DataFrame()
-
-min_concentration = 10 # Minimum TEST SET Concentration
-max_concentration = 15 # Maximum TEST SET Concentration
-num_of_iterations = 100
 
 for i in range(min_concentration, max_concentration + 5, 5) : # Looping through the different test set concentrations
     
@@ -53,6 +56,8 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
     
     for j in range(0, num_of_iterations) : # Loop for number of iterations to be performed
     
+        ### Declaring Variables ###
+    
         specific_accuracy_history = pandas.DataFrame() # Extracting the validation accuracy obtained the very last epoch
         specific_epoch_history = pandas.DataFrame() # Store Specific Epoch Data
         
@@ -61,7 +66,7 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
         X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, shuffle = True, random_state = 0) # Test-Train Split
         X_Train, X_Test = anova(X_Train, Y_Train, X_Test, inputs) # Calling ANOVA (Type 'all' for all features in input)
         
-        ### Neural Network ###
+        ### Build Neural Network ###
        
         classifier = Sequential()
         classifier.add(Dense(inputs, kernel_initializer = 'uniform', activation = 'relu', input_dim = inputs)) # First hidden layer
@@ -71,14 +76,14 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
         
         ### Feed Data To Neural Network ###
         
-        # Constant Learning Rate Model (Default)
+        # Constant Learning Rate Model (Default) #
         
-        # model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 1, epochs = 1000, verbose = 1, callbacks = [es])
+        # model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 32, epochs = 1000, verbose = 1, callbacks = [es])
         
-        # Adaptive Learning Rate Model (Step Decay)
+        # Adaptive Learning Rate Model (Step Decay) #
         
         lrate = LearningRateScheduler(step_decay)
-        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 32, epochs = 1000, verbose = 1, callbacks = [es, lrate])
+        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = batch_size, epochs = 1000, verbose = 1, callbacks = [es, lrate])
         
         ### Loss Plot ###
     
@@ -128,4 +133,5 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
 accuracy_summary.to_csv('Accuracy Summary.csv')
 epoch_summary.to_csv('Epoch Summary.csv')
 
+del accuracy_history, epoch_history
 del i, min_concentration, max_concentration, num_of_iterations
