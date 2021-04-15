@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 from keras import callbacks
 from keras.layers import Dense
 from keras.optimizers import SGD
+from keras.optimizers import Adam
 from keras.models import Sequential
+from keras.optimizers import RMSprop
+from keras.optimizers import Adagrad
 from keras.callbacks import LearningRateScheduler
 from sklearn.model_selection import train_test_split
 
@@ -19,7 +22,7 @@ from sklearn.model_selection import train_test_split
 batch_size = 1 # Set Batch Size
 min_concentration = 10 # Minimum TEST SET Concentration
 max_concentration = 50 # Maximum TEST SET Concentration
-num_of_iterations = 100
+num_of_iterations = 1
 
 ### Define Learning Rate Schedule Function ###
 
@@ -46,8 +49,11 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
     
     inputs = 25
     
-    # opt = SGD() # Default SGD with Learning Rate = 0.01
-    opt = SGD(learning_rate = 0.0) # To be used in adaptive model
+    # opt = SGD() # Default Stochastic Gradient Descent
+    # opt = SGD(learning_rate = 0.0) # Stochastic Gradient Descent for use in step decay model
+    # opt = RMSprop() # Root Mean Square Propagation
+    # opt = Adagrad() # Adaptive Gradient Algorithm
+    opt = Adam() # Adaptive Moment Estimation
     
     es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
     
@@ -71,19 +77,24 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
         classifier = Sequential()
         classifier.add(Dense(inputs, kernel_initializer = 'uniform', activation = 'relu', input_dim = inputs)) # First hidden layer
         classifier.add(Dense(1, kernel_initializer = 'uniform', activation = 'sigmoid')) # Output layer
-        
         classifier.compile(optimizer = opt, loss = 'binary_crossentropy', metrics = 'accuracy')
         
         ### Feed Data To Neural Network ###
         
-        # Constant Learning Rate Model (Default) #
+        # Default Model : Constant Learning Rate
         
-        # model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = 32, epochs = 1000, verbose = 1, callbacks = [es])
+        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = batch_size, epochs = 1000000, verbose = 1, callbacks = [es])
         
-        # Adaptive Learning Rate Model (Step Decay) #
+        # Adaptive Learning Rate Model : Step Decay
         
-        lrate = LearningRateScheduler(step_decay)
-        model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = batch_size, epochs = 1000, verbose = 1, callbacks = [es, lrate])
+        # lrate = LearningRateScheduler(step_decay)
+        # model_data = classifier.fit(X_Train, Y_Train, validation_data = (X_Test, Y_Test), batch_size = batch_size, epochs = 1000, verbose = 1, callbacks = [es, lrate])
+        
+        ### Save model ###
+        
+    	# filename = 'Model' + '.h5'
+    	# classifier.save(filename)
+    	# print('Saved %s' % filename)
         
         ### Loss Plot ###
     
@@ -111,9 +122,10 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
         ### Deleting temporary variables ###
         
         del X_Test, X_Train, Y_Test, Y_Train
-        del classifier, model_data, validation_accuracy, lrate
+        del classifier, model_data, validation_accuracy
         del specific_accuracy_history, specific_epoch_history
         del training_loss, test_loss, epoch_count
+        # del lrate
     
     ### Storing Summary of Test Set Concentration ###
     
@@ -135,3 +147,4 @@ epoch_summary.to_csv('Epoch Summary.csv')
 
 del accuracy_history, epoch_history
 del i, min_concentration, max_concentration, num_of_iterations
+del batch_size
