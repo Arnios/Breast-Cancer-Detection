@@ -22,7 +22,7 @@ from sklearn.model_selection import train_test_split
 batch_size = 1 # Set Batch Size
 min_concentration = 10 # Minimum TEST SET Concentration
 max_concentration = 50 # Maximum TEST SET Concentration
-num_of_iterations = 1
+num_of_iterations = 100
 
 ### Define Learning Rate Schedule Function ###
 
@@ -51,9 +51,9 @@ for i in range(min_concentration, max_concentration + 5, 5) : # Looping through 
     
     # opt = SGD() # Default Stochastic Gradient Descent
     # opt = SGD(learning_rate = 0.0) # Stochastic Gradient Descent for use in step decay model
-    # opt = RMSprop() # Root Mean Square Propagation
+    opt = RMSprop() # Root Mean Square Propagation
     # opt = Adagrad() # Adaptive Gradient Algorithm
-    opt = Adam() # Adaptive Moment Estimation
+    # opt = Adam() # Adaptive Moment Estimation
     
     es = callbacks.EarlyStopping(monitor = 'val_loss', mode = 'min', patience = 10, restore_best_weights = False, verbose = 1)
     
