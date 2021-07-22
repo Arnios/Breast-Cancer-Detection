@@ -1,31 +1,25 @@
 ################################################## Importing libraries ###############################################
 
-import keras
-import xgboost
+import numpy
+import pandas
 import seaborn
-import tensorflow
 import matplotlib.pyplot as plt
-
-from keras.layers import Dense
-from keras.models import Sequential
-from sklearn.metrics import roc_curve
-from sklearn.metrics import roc_auc_score
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import f1_score,confusion_matrix
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 ##################################################### Importing dataset ###############################################
 
-import numpy
-import pandas
+from sklearn.preprocessing import LabelEncoder
 
-dataset = pandas.read_csv('wpbc.data', delimiter = ",", header = None, names = ['ID number', 'Outcome', 'Time', 'radius mean', 'texture mean', 'perimeter mean', 'area mean', 'smoothness mean', 'compactness mean', 'concavity mean', 'concave points mean', 'symmetry mean', 'fractal dimension mean', 'radius se', 'texture se', 'perimeter se', 'area se', 'smoothness se', 'compactness se', 'concavity se', 'concave points se', 'symmetry se', 'fractal dimension se', 'radius worst', 'texture worst', 'perimeter worst', 'area worst', 'smoothness worst', 'compactness worst', 'concavity worst', 'concave points worst', 'symmetry worst', 'fractal dimension worst', 'Tumor size', 'Lymph node status'])
+dataset = pandas.read_csv('wpbc.data', delimiter = ",", header = None, names = ['ID_number', 'Outcome', 'Time', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean', 'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry_mean', 'fractal_dimension_mean', 'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se', 'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst', 'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst', 'symmetry_worst', 'fractal_dimension_worst', 'Tumor_size', 'Lymph_node_status'])
+dataset = dataset[dataset.Lymph_node_status != '?']
 information = pandas.concat([dataset.dtypes, dataset.nunique(dropna = False).sort_values(ascending = False), dataset.isnull().sum().sort_values(ascending = False), (100*dataset.isnull().sum()/dataset.isnull().count()).sort_values(ascending = False)], axis = 1, keys = ['Type', 'Unique Values', 'Null Values', 'Null Percentage']) # Null Value Check
 
-X = dataset.drop(['id', 'diagnosis', 'Unnamed: 32'], axis = 1) # Independent variables
-Y = dataset.diagnosis # Dependant variables
+X = dataset.drop(['ID_number', 'Outcome', 'Time', 'Lymph_node_status'], axis = 1) # Independent variables
+X = (X - X.min()) / (X.max() - X.min()) # Min-Max Normalization
+X = numpy.asarray(X).astype('float32')
+
+Y = dataset['Outcome'] # Dependant variables
+Y = LabelEncoder().fit_transform(Y) # Enconding the categorical dependant variable
+Y = numpy.asarray(Y).astype('float32')
 
 ax1 = seaborn.countplot(Y, label = 'Count')
 B, M = Y.value_counts()
@@ -36,7 +30,27 @@ ax2 = seaborn.lineplot(data = X.mean()) # Line plot of mean of individual featur
 ax2.set(xticklabels = [])
 ax2.set(xlabel = 'Features')
 
-X = (X - X.min()) / (X.max() - X.min()) # Normalization of features
+################################################# Principal Component Analysis ##########################################
+
+for i in range(10, 55, 5) :
+
+    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, random_state = 1) # Split data into train and test sets
+    pca(X_Train, X_Test, None, i) # Type None for all features
+    
+    del X_Train, X_Test, Y_Train, Y_Test # Deleting Temporary Variables
+    
+del i
+
+######################################################### ANOVA F-Test ################################################
+
+for i in range(10, 55, 5) :    
+
+    X_Train, X_Test, Y_Train, Y_Test = train_test_split(X, Y, test_size = i/100, random_state = 1) # Split data into train and test sets
+    X_Train, X_Test = anova(X_Train, Y_Train, X_Test, 'all') # Type all for all features
+    
+    del X_Train, X_Test, Y_Train, Y_Test # Deleting Temporary Variables
+    
+del i
 
 ###################################################### Feature Importance #############################################
 
